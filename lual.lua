@@ -2,6 +2,7 @@
 
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -13,13 +14,14 @@ screenGui.ResetOnSpawn = false
 screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 screenGui.Parent = playerGui
 
--- 2. Input Container (classic dark panel)
+-- 2. Input Container
 local inputContainer = Instance.new("Frame")
 inputContainer.Name = "InputContainer"
 inputContainer.Size = UDim2.new(0, 420, 0, 52)
 inputContainer.Position = UDim2.new(0.5, -210, 0.42, -26)
 inputContainer.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 inputContainer.BorderSizePixel = 0
+inputContainer.Active = true
 inputContainer.Parent = screenGui
 
 local inputCorner = Instance.new("UICorner")
@@ -45,7 +47,7 @@ textBox.ClearTextOnFocus = true
 textBox.Text = ""
 textBox.Parent = inputContainer
 
--- 3. Display Frame (the message that pops up)
+-- 3. Display Frame
 local displayFrame = Instance.new("Frame")
 displayFrame.Name = "DisplayFrame"
 displayFrame.Size = UDim2.new(0, 520, 0, 90)
@@ -54,6 +56,7 @@ displayFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 displayFrame.BackgroundTransparency = 1
 displayFrame.BorderSizePixel = 0
 displayFrame.Visible = false
+displayFrame.Active = true
 displayFrame.Parent = screenGui
 
 local displayCorner = Instance.new("UICorner")
@@ -66,7 +69,6 @@ displayStroke.Thickness = 2.5
 displayStroke.Transparency = 1
 displayStroke.Parent = displayFrame
 
--- Classic orange gradient (2018 style)
 local uiGradient = Instance.new("UIGradient")
 uiGradient.Color = ColorSequence.new({
 	ColorSequenceKeypoint.new(0, Color3.fromRGB(204, 127, 0)),
@@ -88,13 +90,70 @@ textLabel.TextWrapped = true
 textLabel.TextTransparency = 1
 textLabel.Parent = displayFrame
 
--- 4. Animation settings
+-- 4. Smooth Dragging System with Boundaries
+local function makeDraggable(frame)
+	local dragging = false
+	local dragStart = nil
+	local startPos = nil
+	local originalSize = frame.Size
+
+	frame.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = true
+			dragStart = input.Position
+			startPos = frame.Position
+			originalSize = frame.Size
+
+			-- Scale up feedback
+			TweenService:Create(frame, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+				Size = originalSize + UDim2.new(0, 6, 0, 4)
+			}):Play()
+		end
+	end)
+
+	frame.InputEnded:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = false
+
+			-- Scale back down
+			TweenService:Create(frame, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+				Size = originalSize
+			}):Play()
+		end
+	end)
+
+	UserInputService.InputChanged:Connect(function(input)
+		if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+			local delta = input.Position - dragStart
+
+			-- Calculate new position
+			local newX = startPos.X.Offset + delta.X
+			local newY = startPos.Y.Offset + delta.Y
+
+			-- Get screen size
+			local screenSize = workspace.CurrentCamera.ViewportSize
+			local frameSize = frame.AbsoluteSize
+
+			-- Clamp so the frame never goes off-screen
+			newX = math.clamp(newX, 0, screenSize.X - frameSize.X)
+			newY = math.clamp(newY, 0, screenSize.Y - frameSize.Y)
+
+			frame.Position = UDim2.new(0, newX, 0, newY)
+		end
+	end)
+end
+
+-- Make both frames draggable
+makeDraggable(inputContainer)
+makeDraggable(displayFrame)
+
+-- 5. Animation settings
 local tweenInfoIn = TweenInfo.new(0.55, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 local tweenInfoOut = TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
 
 local isShowing = false
 
--- 5. Display function
+-- 6. Display function
 local function displayCustomMessage(messageText)
 	if isShowing then return end
 	isShowing = true
@@ -152,7 +211,7 @@ local function displayCustomMessage(messageText)
 	isShowing = false
 end
 
--- 6. Input trigger
+-- 7. Input trigger
 textBox.FocusLost:Connect(function(enterPressed)
 	if enterPressed and textBox.Text ~= "" and not isShowing then
 		local userInput = textBox.Text
