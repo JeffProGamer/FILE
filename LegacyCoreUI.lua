@@ -1,10 +1,13 @@
--- Full CoreGui UICorner + Backpack Color Matcher
--- No transparency changes
+-- One-bit Full CoreGui Legacy Style Script
+-- Old Backpack color + UICorner 8 + Resume → Play Green
 
 local CoreGui = game:GetService("CoreGui")
 
+-- Colors
+local PLAY_GREEN = Color3.fromRGB(0, 170, 80)
+
 local function getBrighterColor(color, amount)
-	amount = amount or 0.18
+	amount = amount or 0.15
 	return Color3.new(
 		math.clamp(color.R + amount, 0, 1),
 		math.clamp(color.G + amount, 0, 1),
@@ -12,77 +15,25 @@ local function getBrighterColor(color, amount)
 	)
 end
 
-local function addOrSetCorner(inst, radius)
+local function addOrSetCorner(inst)
 	if not inst:IsA("GuiObject") then return end
-
 	local corner = inst:FindFirstChildOfClass("UICorner")
 	if not corner then
 		corner = Instance.new("UICorner")
 		corner.Parent = inst
 	end
-	corner.CornerRadius = UDim.new(0, radius)
+	corner.CornerRadius = UDim.new(0, 8)
 end
 
-local function styleInstance(inst, targetColor)
-	if not inst:IsA("GuiObject") then return end
-
-	-- Apply brighter backpack color
-	pcall(function()
-		inst.BackgroundColor3 = targetColor
-	end)
-
-	-- Force UICorner 8
-	addOrSetCorner(inst, 8)
-end
-
-local function process(inst, targetColor)
-	styleInstance(inst, targetColor)
-
-	for _, child in ipairs(inst:GetChildren()) do
-		process(child, targetColor)
-	end
-end
-
--- ======================
--- GET BACKPACK COLOR
--- ======================
-local backpackColor = Color3.fromRGB(99, 95, 98) -- fallback
-local backpack = CoreGui:FindFirstChild("Backpack", true)
-	or (CoreGui:FindFirstChild("RobloxGui") and CoreGui.RobloxGui:FindFirstChild("Backpack", true))
-
-if backpack and backpack:IsA("GuiObject") then
-	backpackColor = backpack.BackgroundColor3
-	print("Found Backpack color:", backpackColor)
-else
-	warn("Backpack not found, using fallback color")
-end
-
-local brighterColor = getBrighterColor(backpackColor, 0.18)
-print("Using brighter color:", brighterColor)
-
--- ======================
--- APPLY TO ENTIRE COREGUI
--- ======================
-process(CoreGui, brighterColor)
--- Change blue Resume button → Roblox Play Button Green
-
-local CoreGui = game:GetService("CoreGui")
-
-local PLAY_GREEN = Color3.fromRGB(0, 170, 80) -- Classic Roblox Play green
-
-local function forceGreen(inst)
+local function forceColor(inst, color)
 	pcall(function()
 		if inst:IsA("GuiObject") then
-			inst.BackgroundColor3 = PLAY_GREEN
+			inst.BackgroundColor3 = color
 		end
 		if inst:IsA("ImageLabel") or inst:IsA("ImageButton") then
-			inst.ImageColor3 = PLAY_GREEN
+			inst.ImageColor3 = color
 		end
-		if inst:IsA("TextButton") or inst:IsA("TextLabel") then
-			inst.TextColor3 = Color3.fromRGB(255, 255, 255)
-		end
-
-		-- Remove gradient so the color actually shows
+		-- Remove gradient so color actually shows
 		local gradient = inst:FindFirstChildOfClass("UIGradient")
 		if gradient then
 			gradient:Destroy()
@@ -90,21 +41,38 @@ local function forceGreen(inst)
 	end)
 end
 
-local function process(inst)
-	local name = inst.Name:lower()
-
-	if name:find("resume") or name:find("play") or name:find("continue") then
-		forceGreen(inst)
-		print("✅ Changed to Play green:", inst:GetFullName())
+-- Get real Backpack color
+local backpackColor = Color3.fromRGB(99, 95, 98) -- fallback
+local backpack = CoreGui:FindFirstChild("Backpack", true)
+if not backpack then
+	local robloxGui = CoreGui:FindFirstChild("RobloxGui")
+	if robloxGui then
+		backpack = robloxGui:FindFirstChild("Backpack", true)
 	end
+end
 
-	-- Also catch remaining blue buttons
+if backpack and backpack:IsA("GuiObject") then
+	backpackColor = backpack.BackgroundColor3
+	print("Using Backpack color:", backpackColor)
+end
+
+local oldColor = getBrighterColor(backpackColor, 0.15)
+
+-- Main processor
+local function process(inst)
 	if inst:IsA("GuiObject") then
-		local c = inst.BackgroundColor3
-		if c.B > 0.45 and c.B > c.R + 0.15 and c.B > c.G + 0.15 then
-			forceGreen(inst)
-			print("✅ Changed blue button to green:", inst:GetFullName())
+		local name = inst.Name:lower()
+
+		-- Special case: Resume / Play / Continue → green
+		if name:find("resume") or name:find("play") or name:find("continue") then
+			forceColor(inst, PLAY_GREEN)
+		else
+			-- Everything else → old Backpack color
+			forceColor(inst, oldColor)
 		end
+
+		-- Always add UICorner 8
+		addOrSetCorner(inst)
 	end
 
 	for _, child in ipairs(inst:GetChildren()) do
@@ -112,7 +80,7 @@ local function process(inst)
 	end
 end
 
+-- Run on entire CoreGui
 process(CoreGui)
-print("Done — Resume button is now Roblox Play green")
 
-print("✅ Finished — UICorner 8 + brighter Backpack color applied to entire CoreGui")
+print("✅ Done — Whole CoreGui set to old color + UICorner 8 + Resume is green")
