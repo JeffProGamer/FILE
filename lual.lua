@@ -14,11 +14,12 @@ screenGui.ResetOnSpawn = false
 screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 screenGui.Parent = playerGui
 
--- 2. Input Container
+-- 2. Input Container (now Scale + Anchor 0.5)
 local inputContainer = Instance.new("Frame")
 inputContainer.Name = "InputContainer"
-inputContainer.Size = UDim2.new(0, 420, 0, 52)
-inputContainer.Position = UDim2.new(0.5, -210, 0.42, -26)
+inputContainer.Size = UDim2.new(0.38, 0, 0.065, 0)          -- Scale based
+inputContainer.Position = UDim2.new(0.5, 0, 0.42, 0)
+inputContainer.AnchorPoint = Vector2.new(0.5, 0.5)
 inputContainer.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 inputContainer.BorderSizePixel = 0
 inputContainer.Active = true
@@ -41,17 +42,18 @@ textBox.BackgroundTransparency = 1
 textBox.TextColor3 = Color3.fromRGB(255, 255, 255)
 textBox.TextSize = 18
 textBox.Font = Enum.Font.Gotham
-textBox.PlaceholderText = "Type a cool message and press Enter..."
+textBox.PlaceholderText = "Type a cool message and press Enter... (or press T)"
 textBox.PlaceholderColor3 = Color3.fromRGB(140, 140, 140)
 textBox.ClearTextOnFocus = true
 textBox.Text = ""
 textBox.Parent = inputContainer
 
--- 3. Display Frame
+-- 3. Display Frame (now Scale + Anchor 0.5)
 local displayFrame = Instance.new("Frame")
 displayFrame.Name = "DisplayFrame"
-displayFrame.Size = UDim2.new(0, 520, 0, 90)
-displayFrame.Position = UDim2.new(0.5, -260, 0.18, -45)
+displayFrame.Size = UDim2.new(0.48, 0, 0.11, 0)             -- Scale based
+displayFrame.Position = UDim2.new(0.5, 0, 0.18, 0)
+displayFrame.AnchorPoint = Vector2.new(0.5, 0.5)
 displayFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 displayFrame.BackgroundTransparency = 1
 displayFrame.BorderSizePixel = 0
@@ -90,7 +92,7 @@ textLabel.TextWrapped = true
 textLabel.TextTransparency = 1
 textLabel.Parent = displayFrame
 
--- 4. Robust Drag System (works properly with Touch + Mouse)
+-- 4. Robust Drag System (updated for AnchorPoint 0.5)
 local function makeDraggable(frame)
 	local dragging = false
 	local dragInput = nil
@@ -103,12 +105,15 @@ local function makeDraggable(frame)
 		local newX = startPos.X.Offset + delta.X
 		local newY = startPos.Y.Offset + delta.Y
 
-		-- Screen boundaries
 		local screenSize = workspace.CurrentCamera.ViewportSize
 		local frameSize = frame.AbsoluteSize
 
-		newX = math.clamp(newX, 0, screenSize.X - frameSize.X)
-		newY = math.clamp(newY, 0, screenSize.Y - frameSize.Y)
+		-- Because AnchorPoint is 0.5, 0.5 we clamp around the center
+		local halfX = frameSize.X / 2
+		local halfY = frameSize.Y / 2
+
+		newX = math.clamp(newX, halfX, screenSize.X - halfX)
+		newY = math.clamp(newY, halfY, screenSize.Y - halfY)
 
 		frame.Position = UDim2.new(0, newX, 0, newY)
 	end
@@ -122,16 +127,14 @@ local function makeDraggable(frame)
 
 			-- Scale up feedback
 			TweenService:Create(frame, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-				Size = originalSize + UDim2.new(0, 6, 0, 4)
+				Size = originalSize + UDim2.new(0.012, 0, 0.008, 0)
 			}):Play()
 
-			-- Track when this specific input ends (critical for touch)
 			input.Changed:Connect(function()
 				if input.UserInputState == Enum.UserInputState.End then
 					dragging = false
 					dragInput = nil
 
-					-- Scale back down
 					TweenService:Create(frame, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
 						Size = originalSize
 					}):Play()
@@ -153,7 +156,6 @@ local function makeDraggable(frame)
 	end)
 end
 
--- Make both frames draggable
 makeDraggable(inputContainer)
 makeDraggable(displayFrame)
 
@@ -163,7 +165,7 @@ local tweenInfoOut = TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirec
 
 local isShowing = false
 
--- 6. Display function
+-- 6. Display function (also Scale based)
 local function displayCustomMessage(messageText)
 	if isShowing then return end
 	isShowing = true
@@ -171,15 +173,15 @@ local function displayCustomMessage(messageText)
 	textLabel.Text = messageText
 	displayFrame.Visible = true
 
-	-- Start collapsed
-	displayFrame.Size = UDim2.new(0, 520, 0, 0)
+	-- Start collapsed (scale height to 0)
+	displayFrame.Size = UDim2.new(0.48, 0, 0, 0)
 	displayFrame.BackgroundTransparency = 1
 	displayStroke.Transparency = 1
 	textLabel.TextTransparency = 1
 
 	-- Entry
 	local frameIn = TweenService:Create(displayFrame, tweenInfoIn, {
-		Size = UDim2.new(0, 520, 0, 90),
+		Size = UDim2.new(0.48, 0, 0.11, 0),
 		BackgroundTransparency = 0.15
 	})
 	local strokeIn = TweenService:Create(displayStroke, tweenInfoIn, {
@@ -195,7 +197,6 @@ local function displayCustomMessage(messageText)
 	textIn:Play()
 	textIn.Completed:Wait()
 
-	-- Hold for 10 seconds
 	task.wait(10)
 
 	-- Exit
@@ -206,7 +207,7 @@ local function displayCustomMessage(messageText)
 		Transparency = 1
 	})
 	local frameOut = TweenService:Create(displayFrame, tweenInfoOut, {
-		Size = UDim2.new(0, 520, 0, 0),
+		Size = UDim2.new(0.48, 0, 0, 0),
 		BackgroundTransparency = 1
 	})
 
@@ -221,7 +222,7 @@ local function displayCustomMessage(messageText)
 	isShowing = false
 end
 
--- 7. Input trigger
+-- 7. Enter key
 textBox.FocusLost:Connect(function(enterPressed)
 	if enterPressed and textBox.Text ~= "" and not isShowing then
 		local userInput = textBox.Text
@@ -231,5 +232,14 @@ textBox.FocusLost:Connect(function(enterPressed)
 		task.spawn(function()
 			displayCustomMessage(userInput)
 		end)
+	end
+end)
+
+-- 8. Keyboard Shortcut (T)
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+	if gameProcessed then return end
+
+	if input.KeyCode == Enum.KeyCode.T and not isShowing and inputContainer.Visible then
+		textBox:CaptureFocus()
 	end
 end)
