@@ -1,11 +1,19 @@
--- Legacy Corner Fixer (Hotbar + Backpack + DevConsole only)
--- Only adds/sets UICorner to 8px — never touches Position or Size
+-- Legacy Style Matcher
+-- Matches Backpack color (brighter) + UICorner 8 + Transparency -0.2
 
 local CoreGui = game:GetService("CoreGui")
 
-local function addOrSetCorner(inst, radius)
-	if not inst or not inst:IsA("GuiObject") then return end
+local function getBrighterColor(color, amount)
+	amount = amount or 0.18
+	return Color3.new(
+		math.clamp(color.R + amount, 0, 1),
+		math.clamp(color.G + amount, 0, 1),
+		math.clamp(color.B + amount, 0, 1)
+	)
+end
 
+local function addOrSetCorner(inst, radius)
+	if not inst:IsA("GuiObject") then return end
 	local corner = inst:FindFirstChildOfClass("UICorner")
 	if not corner then
 		corner = Instance.new("UICorner")
@@ -14,65 +22,84 @@ local function addOrSetCorner(inst, radius)
 	corner.CornerRadius = UDim.new(0, radius)
 end
 
-local function process(inst)
-	if not inst then return end
+local function styleInstance(inst, targetColor)
+	if not inst:IsA("GuiObject") then return end
 
-	-- Only touch GuiObjects
-	if inst:IsA("GuiObject") then
-		addOrSetCorner(inst, 8)
-	end
+	-- Apply brighter backpack color
+	pcall(function()
+		inst.BackgroundColor3 = targetColor
+	end)
 
-	-- Recurse into children
+	-- Transparency - 0.2 (more solid)
+	pcall(function()
+		local current = inst.BackgroundTransparency
+		inst.BackgroundTransparency = math.clamp(current - 0.2, 0, 1)
+	end)
+
+	-- Force UICorner 8
+	addOrSetCorner(inst, 8)
+end
+
+local function process(inst, targetColor)
+	styleInstance(inst, targetColor)
 	for _, child in ipairs(inst:GetChildren()) do
-		process(child)
+		process(child, targetColor)
 	end
 end
 
 -- ======================
--- TARGETS
+-- FIND BACKPACK COLOR
 -- ======================
+local backpackColor = Color3.fromRGB(99, 95, 98) -- fallback classic gray
+local backpack = CoreGui:FindFirstChild("Backpack", true)
+	or (CoreGui:FindFirstChild("RobloxGui") and CoreGui.RobloxGui:FindFirstChild("Backpack", true))
 
--- 1. Developer Console (the true legacy piece)
-local devConsole = CoreGui:FindFirstChild("DevConsoleMaster")
-	or CoreGui:FindFirstChild("DevConsole")
-	or CoreGui:FindFirstChild("DeveloperConsole")
-
-if devConsole then
-	process(devConsole)
-	print("✅ Applied UICorner 8 to Developer Console")
+if backpack and backpack:IsA("GuiObject") then
+	backpackColor = backpack.BackgroundColor3
+	print("Found Backpack color:", backpackColor)
 else
-	warn("DevConsole not found")
+	warn("Backpack not found, using fallback color")
 end
 
--- 2. Backpack + Hotbar (common locations)
-local function findAndProcess(name)
-	local obj = CoreGui:FindFirstChild(name, true) -- deep search
+local brighterColor = getBrighterColor(backpackColor, 0.18)
+print("Using brighter color:", brighterColor)
+
+-- ======================
+-- APPLY TO TARGETS
+-- ======================
+
+local function applyTo(name)
+	local obj = CoreGui:FindFirstChild(name, true)
 	if obj then
-		process(obj)
-		print("✅ Applied UICorner 8 to", name)
+		process(obj, brighterColor)
+		print("✅ Styled:", name)
 	end
 end
 
-findAndProcess("Backpack")
-findAndProcess("Hotbar")
-findAndProcess("HotbarContainer")
-findAndProcess("BackpackGui")
-findAndProcess("HotbarGui")
+-- Developer Console
+applyTo("DevConsoleMaster")
+applyTo("DevConsole")
+applyTo("DeveloperConsole")
 
--- Also check under RobloxGui (most common place)
+-- Backpack & Hotbar
+applyTo("Backpack")
+applyTo("Hotbar")
+applyTo("HotbarContainer")
+applyTo("BackpackGui")
+applyTo("HotbarGui")
+applyTo("HotbarFrame")
+applyTo("BackpackFrame")
+
+-- Also under RobloxGui
 local robloxGui = CoreGui:FindFirstChild("RobloxGui")
 if robloxGui then
-	findAndProcess("Backpack")
-	findAndProcess("Hotbar")
-	
-	-- Extra common names used over the years
-	for _, name in ipairs({"HotbarFrame", "BackpackFrame", "Inventory", "Toolbelt"}) do
+	for _, name in ipairs({"Backpack", "Hotbar", "HotbarFrame", "BackpackFrame", "Inventory", "Toolbelt"}) do
 		local obj = robloxGui:FindFirstChild(name, true)
 		if obj then
-			process(obj)
-			print("✅ Applied UICorner 8 to", name)
+			process(obj, brighterColor)
+			print("✅ Styled under RobloxGui:", name)
 		end
 	end
 end
 
-print("Legacy Corner Fix finished — only UICorners were changed")
+print("Finished — color matched to Backpack (brighter) + UICorner 8 + Transparency -0.2")
