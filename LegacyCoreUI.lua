@@ -64,5 +64,55 @@ print("Using brighter color:", brighterColor)
 -- APPLY TO ENTIRE COREGUI
 -- ======================
 process(CoreGui, brighterColor)
+-- Change blue Resume button → Roblox Play Button Green
+
+local CoreGui = game:GetService("CoreGui")
+
+local PLAY_GREEN = Color3.fromRGB(0, 170, 80) -- Classic Roblox Play green
+
+local function forceGreen(inst)
+	pcall(function()
+		if inst:IsA("GuiObject") then
+			inst.BackgroundColor3 = PLAY_GREEN
+		end
+		if inst:IsA("ImageLabel") or inst:IsA("ImageButton") then
+			inst.ImageColor3 = PLAY_GREEN
+		end
+		if inst:IsA("TextButton") or inst:IsA("TextLabel") then
+			inst.TextColor3 = Color3.fromRGB(255, 255, 255)
+		end
+
+		-- Remove gradient so the color actually shows
+		local gradient = inst:FindFirstChildOfClass("UIGradient")
+		if gradient then
+			gradient:Destroy()
+		end
+	end)
+end
+
+local function process(inst)
+	local name = inst.Name:lower()
+
+	if name:find("resume") or name:find("play") or name:find("continue") then
+		forceGreen(inst)
+		print("✅ Changed to Play green:", inst:GetFullName())
+	end
+
+	-- Also catch remaining blue buttons
+	if inst:IsA("GuiObject") then
+		local c = inst.BackgroundColor3
+		if c.B > 0.45 and c.B > c.R + 0.15 and c.B > c.G + 0.15 then
+			forceGreen(inst)
+			print("✅ Changed blue button to green:", inst:GetFullName())
+		end
+	end
+
+	for _, child in ipairs(inst:GetChildren()) do
+		process(child)
+	end
+end
+
+process(CoreGui)
+print("Done — Resume button is now Roblox Play green")
 
 print("✅ Finished — UICorner 8 + brighter Backpack color applied to entire CoreGui")
