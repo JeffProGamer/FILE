@@ -90,12 +90,28 @@ textLabel.TextWrapped = true
 textLabel.TextTransparency = 1
 textLabel.Parent = displayFrame
 
--- 4. Smooth Dragging System with Boundaries
+-- 4. Robust Drag System (works properly with Touch + Mouse)
 local function makeDraggable(frame)
 	local dragging = false
+	local dragInput = nil
 	local dragStart = nil
 	local startPos = nil
 	local originalSize = frame.Size
+
+	local function update(input)
+		local delta = input.Position - dragStart
+		local newX = startPos.X.Offset + delta.X
+		local newY = startPos.Y.Offset + delta.Y
+
+		-- Screen boundaries
+		local screenSize = workspace.CurrentCamera.ViewportSize
+		local frameSize = frame.AbsoluteSize
+
+		newX = math.clamp(newX, 0, screenSize.X - frameSize.X)
+		newY = math.clamp(newY, 0, screenSize.Y - frameSize.Y)
+
+		frame.Position = UDim2.new(0, newX, 0, newY)
+	end
 
 	frame.InputBegan:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -108,37 +124,31 @@ local function makeDraggable(frame)
 			TweenService:Create(frame, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
 				Size = originalSize + UDim2.new(0, 6, 0, 4)
 			}):Play()
+
+			-- Track when this specific input ends (critical for touch)
+			input.Changed:Connect(function()
+				if input.UserInputState == Enum.UserInputState.End then
+					dragging = false
+					dragInput = nil
+
+					-- Scale back down
+					TweenService:Create(frame, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+						Size = originalSize
+					}):Play()
+				end
+			end)
 		end
 	end)
 
-	frame.InputEnded:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-			dragging = false
-
-			-- Scale back down
-			TweenService:Create(frame, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-				Size = originalSize
-			}):Play()
+	frame.InputChanged:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+			dragInput = input
 		end
 	end)
 
 	UserInputService.InputChanged:Connect(function(input)
-		if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-			local delta = input.Position - dragStart
-
-			-- Calculate new position
-			local newX = startPos.X.Offset + delta.X
-			local newY = startPos.Y.Offset + delta.Y
-
-			-- Get screen size
-			local screenSize = workspace.CurrentCamera.ViewportSize
-			local frameSize = frame.AbsoluteSize
-
-			-- Clamp so the frame never goes off-screen
-			newX = math.clamp(newX, 0, screenSize.X - frameSize.X)
-			newY = math.clamp(newY, 0, screenSize.Y - frameSize.Y)
-
-			frame.Position = UDim2.new(0, newX, 0, newY)
+		if input == dragInput and dragging then
+			update(input)
 		end
 	end)
 end
