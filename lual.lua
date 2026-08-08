@@ -1,137 +1,164 @@
 -- Put this inside a LocalScript placed directly under StarterGui
+
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
--- 1. Create the Main ScreenGui
+-- 1. Main ScreenGui
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "CoolTextScreenGui"
 screenGui.ResetOnSpawn = false
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 screenGui.Parent = playerGui
 
--- 2. Create a sleek TextBox Container (For Input)
+-- 2. Input Container (classic dark panel)
 local inputContainer = Instance.new("Frame")
 inputContainer.Name = "InputContainer"
-inputContainer.Size = UDim2.new(0, 400, 0, 50)
-inputContainer.Position = UDim2.new(0.5, -200, 0.4, -25)
-inputContainer.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-inputContainer.BackgroundTransparency = 0.2
+inputContainer.Size = UDim2.new(0, 420, 0, 52)
+inputContainer.Position = UDim2.new(0.5, -210, 0.42, -26)
+inputContainer.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+inputContainer.BorderSizePixel = 0
 inputContainer.Parent = screenGui
 
-local uiCorner = Instance.new("UICorner")
-uiCorner.CornerRadius = UDim.new(0, 8)
-uiCorner.Parent = inputContainer
+local inputCorner = Instance.new("UICorner")
+inputCorner.CornerRadius = UDim.new(0, 8)
+inputCorner.Parent = inputContainer
 
-local uiStroke = Instance.new("UIStroke")
-uiStroke.Color = Color3.fromRGB(204, 127, 0)
-uiStroke.Thickness = 2
-uiStroke.Parent = inputContainer
+local inputStroke = Instance.new("UIStroke")
+inputStroke.Color = Color3.fromRGB(204, 127, 0)
+inputStroke.Thickness = 2
+inputStroke.Parent = inputContainer
 
 local textBox = Instance.new("TextBox")
 textBox.Name = "UserMessageInput"
-textBox.Size = UDim2.new(1, -20, 1, -10)
-textBox.Position = UDim2.new(0, 10, 0, 5)
+textBox.Size = UDim2.new(1, -24, 1, -12)
+textBox.Position = UDim2.new(0, 12, 0, 6)
 textBox.BackgroundTransparency = 1
 textBox.TextColor3 = Color3.fromRGB(255, 255, 255)
 textBox.TextSize = 18
-textBox.Font = Enum.Font.GothamMedium
+textBox.Font = Enum.Font.Gotham
 textBox.PlaceholderText = "Type a cool message and press Enter..."
-textBox.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
+textBox.PlaceholderColor3 = Color3.fromRGB(140, 140, 140)
 textBox.ClearTextOnFocus = true
+textBox.Text = ""
 textBox.Parent = inputContainer
 
--- 3. Create the Animated Display Frame (For Output)
+-- 3. Display Frame (the message that pops up)
 local displayFrame = Instance.new("Frame")
 displayFrame.Name = "DisplayFrame"
-displayFrame.Size = UDim2.new(0, 500, 0, 80)
-displayFrame.Position = UDim2.new(0.5, -250, 0.2, -40)
-displayFrame.BackgroundTransparency = 1 -- Controlled by Tweens
-displayFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+displayFrame.Size = UDim2.new(0, 520, 0, 90)
+displayFrame.Position = UDim2.new(0.5, -260, 0.18, -45)
+displayFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+displayFrame.BackgroundTransparency = 1
+displayFrame.BorderSizePixel = 0
 displayFrame.Visible = false
 displayFrame.Parent = screenGui
 
 local displayCorner = Instance.new("UICorner")
-displayCorner.CornerRadius = UDim.new(0, 12)
+displayCorner.CornerRadius = UDim.new(0, 10)
 displayCorner.Parent = displayFrame
 
+local displayStroke = Instance.new("UIStroke")
+displayStroke.Color = Color3.fromRGB(204, 127, 0)
+displayStroke.Thickness = 2.5
+displayStroke.Transparency = 1
+displayStroke.Parent = displayFrame
+
+-- Classic orange gradient (2018 style)
 local uiGradient = Instance.new("UIGradient")
-uiGradient.Color = ColorGradient.new({
+uiGradient.Color = ColorSequence.new({
 	ColorSequenceKeypoint.new(0, Color3.fromRGB(204, 127, 0)),
-	ColorSequenceKeypoint.new(1, Color3.fromRGB(100, 50, 0))
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(120, 60, 0))
 })
+uiGradient.Rotation = 90
 uiGradient.Parent = displayFrame
 
 local textLabel = Instance.new("TextLabel")
 textLabel.Name = "FadeTextLabel"
-textLabel.Size = UDim2.new(1, -40, 1, -20)
-textLabel.Position = UDim2.new(0, 20, 0, 10)
+textLabel.Size = UDim2.new(1, -40, 1, -24)
+textLabel.Position = UDim2.new(0, 20, 0, 12)
 textLabel.BackgroundTransparency = 1
 textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 textLabel.Font = Enum.Font.GothamBold
+textLabel.TextSize = 28
 textLabel.TextScaled = true
+textLabel.TextWrapped = true
 textLabel.TextTransparency = 1
-local uiPadding = Instance.new("UIPadding")
-uiPadding.PaddingBottom = UDim.new(0, 5)
-uiPadding.PaddingTop = UDim.new(0, 5)
-uiPadding.Parent = textLabel
 textLabel.Parent = displayFrame
 
--- 4. Animation Settings
-local tweenInfoIn = TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
-local tweenInfoOut = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+-- 4. Animation settings
+local tweenInfoIn = TweenInfo.new(0.55, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+local tweenInfoOut = TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
 
--- 5. Function to play the cinematic display sequence
+local isShowing = false
+
+-- 5. Display function
 local function displayCustomMessage(messageText)
+	if isShowing then return end
+	isShowing = true
+
 	textLabel.Text = messageText
 	displayFrame.Visible = true
-	
-	-- Setup structural presets before entry animation
-	displayFrame.Size = UDim2.new(0, 500, 0, 0)         -- Squished vertically
-	displayFrame.BackgroundTransparency = 1            -- Invisible
-	textLabel.TextTransparency = 1                     -- Invisible
-	
-	-- Construct entry animations
+
+	-- Start collapsed
+	displayFrame.Size = UDim2.new(0, 520, 0, 0)
+	displayFrame.BackgroundTransparency = 1
+	displayStroke.Transparency = 1
+	textLabel.TextTransparency = 1
+
+	-- Entry
 	local frameIn = TweenService:Create(displayFrame, tweenInfoIn, {
-		Size = UDim2.new(0, 500, 0, 80), 
-		BackgroundTransparency = 0.3
+		Size = UDim2.new(0, 520, 0, 90),
+		BackgroundTransparency = 0.15
 	})
-	local textIn = TweenService:Create(textLabel, tweenInfoIn, {TextTransparency = 0})
-	
-	-- Run entry sequence
+	local strokeIn = TweenService:Create(displayStroke, tweenInfoIn, {
+		Transparency = 0
+	})
+	local textIn = TweenService:Create(textLabel, tweenInfoIn, {
+		TextTransparency = 0
+	})
+
 	frameIn:Play()
-	task.wait(0.1) -- Slight delay for staggered text look
+	strokeIn:Play()
+	task.wait(0.08)
 	textIn:Play()
 	textIn.Completed:Wait()
-	
-	-- Stay visible for 10 seconds
+
+	-- Hold for 10 seconds
 	task.wait(10)
-	
-	-- Construct exit animations
+
+	-- Exit
+	local textOut = TweenService:Create(textLabel, tweenInfoOut, {
+		TextTransparency = 1
+	})
+	local strokeOut = TweenService:Create(displayStroke, tweenInfoOut, {
+		Transparency = 1
+	})
 	local frameOut = TweenService:Create(displayFrame, tweenInfoOut, {
-		Size = UDim2.new(0, 500, 0, 0), 
+		Size = UDim2.new(0, 520, 0, 0),
 		BackgroundTransparency = 1
 	})
-	local textOut = TweenService:Create(textLabel, tweenInfoOut, {TextTransparency = 1})
-	
-	-- Run exit sequence
+
 	textOut:Play()
-	task.wait(0.1)
+	task.wait(0.08)
+	strokeOut:Play()
 	frameOut:Play()
 	frameOut.Completed:Wait()
-	
-	-- Cleanup states
+
 	displayFrame.Visible = false
-	inputContainer.Visible = true -- Bring back input box for next round
+	inputContainer.Visible = true
+	isShowing = false
 end
 
--- 6. Connect User input trigger
+-- 6. Input trigger
 textBox.FocusLost:Connect(function(enterPressed)
-	if enterPressed and textBox.Text ~= "" then
+	if enterPressed and textBox.Text ~= "" and not isShowing then
 		local userInput = textBox.Text
-		inputContainer.Visible = false -- Hide input bar while reading
-		
+		textBox.Text = ""
+		inputContainer.Visible = false
+
 		task.spawn(function()
 			displayCustomMessage(userInput)
 		end)
